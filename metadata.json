@@ -1,0 +1,6 @@
+{
+  "name": "Jakwan Computer",
+  "description": "A comprehensive Bengali business inventory and accounts ledger management system for Jakwan Computer and Stationery.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
