@@ -30,7 +30,7 @@ import {
   RefreshCw
 } from "lucide-react";
 
-import { db, productsRef, categoriesRef, salesRef, expensesRef, customersRef, suppliersRef, settingsRef, purchasesRef, seedInitialDataIfEmpty } from "./firebase";
+import { db, productsRef, categoriesRef, salesRef, expensesRef, customersRef, suppliersRef, settingsRef, purchasesRef, seedInitialDataIfEmpty, handleFirestoreError, OperationType } from "./firebase";
 import { Product, Category, Sale, Expense, Customer, Supplier, ShopSettings, Purchase } from "./types";
 import { formatCurrency, convertEnglishToBengaliNumber, formatDateBengali } from "./utils";
 
@@ -84,48 +84,64 @@ export default function App() {
         const list: Product[] = [];
         snap.forEach(doc => list.push({ id: doc.id, ...doc.data() } as Product));
         setProducts(list);
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, "products");
       });
 
       const unsubCategories = onSnapshot(query(categoriesRef, orderBy("name")), (snap) => {
         const list: Category[] = [];
         snap.forEach(doc => list.push({ id: doc.id, ...doc.data() } as Category));
         setCategories(list);
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, "categories");
       });
 
       const unsubSales = onSnapshot(query(salesRef, orderBy("date", "desc")), (snap) => {
         const list: Sale[] = [];
         snap.forEach(doc => list.push({ id: doc.id, ...doc.data() } as Sale));
         setSales(list);
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, "sales");
       });
 
       const unsubExpenses = onSnapshot(query(expensesRef, orderBy("date", "desc")), (snap) => {
         const list: Expense[] = [];
         snap.forEach(doc => list.push({ id: doc.id, ...doc.data() } as Expense));
         setExpenses(list);
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, "expenses");
       });
 
       const unsubCustomers = onSnapshot(query(customersRef, orderBy("name")), (snap) => {
         const list: Customer[] = [];
         snap.forEach(doc => list.push({ id: doc.id, ...doc.data() } as Customer));
         setCustomers(list);
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, "customers");
       });
 
       const unsubSuppliers = onSnapshot(query(suppliersRef, orderBy("name")), (snap) => {
         const list: Supplier[] = [];
         snap.forEach(doc => list.push({ id: doc.id, ...doc.data() } as Supplier));
         setSuppliers(list);
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, "suppliers");
       });
 
       const unsubPurchases = onSnapshot(query(purchasesRef, orderBy("date", "desc")), (snap) => {
         const list: Purchase[] = [];
         snap.forEach(doc => list.push({ id: doc.id, ...doc.data() } as Purchase));
         setPurchases(list);
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, "purchases");
       });
 
       const unsubSettings = onSnapshot(doc(db, "settings", "shop_info"), (docSnap) => {
         if (docSnap.exists()) {
           setShopSettings(docSnap.data() as ShopSettings);
         }
+      }, (error) => {
+        handleFirestoreError(error, OperationType.GET, "settings/shop_info");
       });
 
       setDbLoading(false);
@@ -152,52 +168,80 @@ export default function App() {
 
   // Add Product
   const handleAddProduct = async (prod: Omit<Product, "id">) => {
-    await addDoc(productsRef, {
-      ...prod,
-      createdAt: serverTimestamp()
-    });
+    try {
+      await addDoc(productsRef, {
+        ...prod,
+        createdAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, "products");
+    }
   };
 
   // Edit Product
   const handleEditProduct = async (id: string, prod: Partial<Product>) => {
-    await updateDoc(doc(db, "products", id), prod);
+    try {
+      await updateDoc(doc(db, "products", id), prod);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `products/${id}`);
+    }
   };
 
   // Fast stock adjustments
   const handleEditProductStock = async (id: string, newStock: number) => {
-    await updateDoc(doc(db, "products", id), { stock: newStock });
+    try {
+      await updateDoc(doc(db, "products", id), { stock: newStock });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `products/${id}`);
+    }
   };
 
   // Delete Product
   const handleDeleteProduct = async (id: string) => {
-    await deleteDoc(doc(db, "products", id));
+    try {
+      await deleteDoc(doc(db, "products", id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `products/${id}`);
+    }
   };
 
   // Add Category
   const handleAddCategory = async (cat: Category) => {
-    await setDoc(doc(db, "categories", cat.id!), {
-      name: cat.name,
-      description: cat.description,
-      createdAt: serverTimestamp()
-    });
+    try {
+      await setDoc(doc(db, "categories", cat.id!), {
+        name: cat.name,
+        description: cat.description,
+        createdAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `categories/${cat.id}`);
+    }
   };
 
   // Add Customer
   const handleAddCustomer = async (cust: Omit<Customer, "id">) => {
     const customId = "cust_" + cust.mobile;
-    await setDoc(doc(db, "customers", customId), {
-      ...cust,
-      createdAt: serverTimestamp()
-    });
+    try {
+      await setDoc(doc(db, "customers", customId), {
+        ...cust,
+        createdAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `customers/${customId}`);
+    }
   };
 
   // Add Supplier
   const handleAddSupplier = async (sup: Omit<Supplier, "id">) => {
     const customId = "sup_" + sup.phone;
-    await setDoc(doc(db, "suppliers", customId), {
-      ...sup,
-      createdAt: serverTimestamp()
-    });
+    try {
+      await setDoc(doc(db, "suppliers", customId), {
+        ...sup,
+        createdAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `suppliers/${customId}`);
+    }
   };
 
   // Update outstanding customer due credit limit
@@ -206,7 +250,11 @@ export default function App() {
     const target = customers.find(c => c.id === id);
     if (target) {
       const current = target.totalDue || 0;
-      await updateDoc(custDoc, { totalDue: Math.max(0, current + dueToAdd) });
+      try {
+        await updateDoc(custDoc, { totalDue: Math.max(0, current + dueToAdd) });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.UPDATE, `customers/${id}`);
+      }
     }
   };
 
@@ -216,38 +264,59 @@ export default function App() {
     const target = suppliers.find(s => s.id === id);
     if (target) {
       const current = target.totalDueToSupplier || 0;
-      await updateDoc(supDoc, { totalDueToSupplier: Math.max(0, current + dueToAdd) });
+      try {
+        await updateDoc(supDoc, { totalDueToSupplier: Math.max(0, current + dueToAdd) });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.UPDATE, `suppliers/${id}`);
+      }
     }
   };
 
   // Add general expense entry and deduct
   const handleAddExpense = async (exp: Omit<Expense, "id">) => {
-    await addDoc(expensesRef, {
-      ...exp,
-      createdAt: serverTimestamp()
-    });
+    try {
+      await addDoc(expensesRef, {
+        ...exp,
+        createdAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, "expenses");
+    }
   };
 
   // Add purchase stock log
   const handleAddPurchase = async (purchase: Omit<Purchase, "id">) => {
-    await addDoc(purchasesRef, {
-      ...purchase,
-      createdAt: serverTimestamp()
-    });
+    try {
+      await addDoc(purchasesRef, {
+        ...purchase,
+        createdAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, "purchases");
+    }
   };
 
   // Add POS sales entry
   const handleAddSale = async (sale: Omit<Sale, "id">): Promise<string> => {
-    const docRef = await addDoc(salesRef, {
-      ...sale,
-      createdAt: serverTimestamp()
-    });
-    return docRef.id;
+    try {
+      const docRef = await addDoc(salesRef, {
+        ...sale,
+        createdAt: serverTimestamp()
+      });
+      return docRef.id;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, "sales");
+      return "";
+    }
   };
 
   // Shop Settings Profile Edit
   const handleUpdateShopSettings = async (settings: Partial<ShopSettings>) => {
-    await setDoc(doc(db, "settings", "shop_info"), settings, { merge: true });
+    try {
+      await setDoc(doc(db, "settings", "shop_info"), settings, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, "settings/shop_info");
+    }
   };
 
   // Wipe database and reseed default computer stationery

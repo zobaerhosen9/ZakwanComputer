@@ -195,7 +195,8 @@ export default function Inventory({
       setNewCatDesc("");
       setCategoryModalOpen(false);
     } catch (err) {
-      alert("ক্যাটাগরি সেভ করতে ব্যর্থ।");
+      console.error("Category save error:", err);
+      alert("ক্যাটাগরি সেভ করতে ব্যর্থ: " + (err instanceof Error ? err.message : String(err)));
     } finally {
       setLoading(false);
     }
