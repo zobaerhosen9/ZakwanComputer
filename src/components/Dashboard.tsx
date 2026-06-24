@@ -95,17 +95,26 @@ export default function Dashboard({ products, sales, expenses, role, onTabChange
         sellPrice: p.sellPrice
       }));
 
-      const res = await fetch("/api/advisor", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          totalSales,
-          totalProfit: role === "অ্যাডমিন" ? totalProfit : "সীমাবদ্ধ",
-          totalExpenses: totalExpenseAmount,
-          lowStockProducts: lowStockItems.map(p => ({ name: p.name, stock: p.stock })),
-          productMetrics: topProducts
-        })
-      });
+      let res;
+      try {
+        res = await fetch("/api/advisor", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            totalSales,
+            totalProfit: role === "অ্যাডমিন" ? totalProfit : "সীমাবদ্ধ",
+            totalExpenses: totalExpenseAmount,
+            lowStockProducts: lowStockItems.map(p => ({ name: p.name, stock: p.stock })),
+            productMetrics: topProducts
+          })
+        });
+      } catch (fetchErr) {
+        throw new Error("সার্ভারের সাথে যোগাযোগ করা সম্ভব হচ্ছে না। আপনি যদি গিটহাব পেজেস (GitHub Pages) এ থাকেন, তবে মনে রাখবেন এটি একটি স্ট্যাটিক হোস্টিং এবং এতে এআই ব্যাকএন্ড সার্ভার সক্রিয় থাকে না। জেমিনী এআই উপদেষ্টা ব্যবহার করতে দয়া করে এআই স্টুডিও এর মূল রানিং লিংকটি ব্যবহার করুন।");
+      }
+
+      if (res.status === 404) {
+        throw new Error("জেমিনী এআই উপদেষ্টা রিপোর্ট ব্যবহারের জন্য একটি সক্রিয় ব্যাকএন্ড সার্ভার প্রয়োজন। আপনি যেহেতু গিটহাব পেজেস (GitHub Pages) এর মতো একটি স্ট্যাটিক হোস্টিং-এ আছেন, তাই এআই সার্ভারটি সক্রিয় নয়। এআই রিপোর্ট ব্যবহার করতে দয়া করে এই ডেভেলপমেন্ট/শেয়ার্ড অ্যাপলিকেশন লিংকটি ব্যবহার করুন।");
+      }
 
       const data = await res.json();
       if (!res.ok) {
