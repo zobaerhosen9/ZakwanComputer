@@ -1,0 +1,12 @@
+{
+  "firestore": [
+    {
+      "database": "(default)",
+      "rules": "firestore.rules"
+    },
+    {
+      "database": "ai-studio-jakwancomputer-fa056403-7971-429e-9634-4892cd411aef",
+      "rules": "firestore.rules"
+    }
+  ]
+}
