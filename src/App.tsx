@@ -553,6 +553,123 @@ export default function App() {
     await seedInitialDataIfEmpty();
   };
 
+  // Wipe database and set all stock/balances/history to exactly zero
+  const handleWipeAndZero = async () => {
+    const zeroedProducts = DEFAULT_PRODUCTS.map(p => ({ ...p, stock: 0 }));
+    const zeroedCustomers = DEFAULT_CUSTOMERS.map(c => ({ ...c, totalDue: 0 }));
+    const zeroedSuppliers = DEFAULT_SUPPLIERS.map(s => ({ ...s, totalDueToSupplier: 0 }));
+
+    if (isDemoMode) {
+      localStorage.setItem("jakwan_demo_products", JSON.stringify(zeroedProducts));
+      localStorage.setItem("jakwan_demo_categories", JSON.stringify(DEFAULT_CATEGORIES));
+      localStorage.setItem("jakwan_demo_sales", JSON.stringify([]));
+      localStorage.setItem("jakwan_demo_expenses", JSON.stringify([]));
+      localStorage.setItem("jakwan_demo_customers", JSON.stringify(zeroedCustomers));
+      localStorage.setItem("jakwan_demo_suppliers", JSON.stringify(zeroedSuppliers));
+      localStorage.setItem("jakwan_demo_purchases", JSON.stringify([]));
+      localStorage.setItem("jakwan_demo_settings", JSON.stringify(DEFAULT_SHOP_SETTINGS));
+      
+      setProducts(zeroedProducts);
+      setCategories(DEFAULT_CATEGORIES);
+      setSales([]);
+      setExpenses([]);
+      setCustomers(zeroedCustomers);
+      setSuppliers(zeroedSuppliers);
+      setPurchases([]);
+      setShopSettings(DEFAULT_SHOP_SETTINGS);
+      return;
+    }
+
+    // Cloud mode: Clean sweep of transactions and zero out masters
+    const listP = await getDocs(productsRef);
+    const listC = await getDocs(categoriesRef);
+    const listS = await getDocs(salesRef);
+    const listE = await getDocs(expensesRef);
+    const listCust = await getDocs(customersRef);
+    const listSup = await getDocs(suppliersRef);
+    const listPur = await getDocs(purchasesRef);
+
+    const batch = writeBatch(db);
+
+    // Delete all dynamic transactions
+    listS.forEach(d => batch.delete(d.ref));
+    listE.forEach(d => batch.delete(d.ref));
+    listPur.forEach(d => batch.delete(d.ref));
+
+    // Delete masters to rewrite with 0 values
+    listP.forEach(d => batch.delete(d.ref));
+    listC.forEach(d => batch.delete(d.ref));
+    listCust.forEach(d => batch.delete(d.ref));
+    listSup.forEach(d => batch.delete(d.ref));
+
+    // Commit deletion first
+    await batch.commit();
+
+    // Now write clean zeroed masters
+    const finalBatch = writeBatch(db);
+    
+    // Categories
+    DEFAULT_CATEGORIES.forEach((cat) => {
+      const cRef = doc(categoriesRef, cat.id);
+      finalBatch.set(cRef, {
+        name: cat.name,
+        description: cat.description,
+        createdAt: serverTimestamp()
+      });
+    });
+
+    // Zeroed Customers
+    zeroedCustomers.forEach((cust) => {
+      const custRef = doc(customersRef, cust.id);
+      finalBatch.set(custRef, {
+        name: cust.name,
+        mobile: cust.mobile,
+        totalDue: 0,
+        address: cust.address,
+        createdAt: serverTimestamp()
+      });
+    });
+
+    // Zeroed Suppliers
+    zeroedSuppliers.forEach((sup) => {
+      const supRef = doc(suppliersRef, sup.id);
+      finalBatch.set(supRef, {
+        name: sup.name,
+        contactPerson: sup.contactPerson,
+        phone: sup.phone,
+        totalDueToSupplier: 0,
+        address: sup.address,
+        createdAt: serverTimestamp()
+      });
+    });
+
+    // Zeroed Products
+    zeroedProducts.forEach((prod) => {
+      const pRef = doc(productsRef, prod.id);
+      finalBatch.set(pRef, {
+        name: prod.name,
+        category: prod.category,
+        buyPrice: prod.buyPrice,
+        sellPrice: prod.sellPrice,
+        stock: 0,
+        alertLimit: prod.alertLimit,
+        sku: prod.sku,
+        shelf: prod.shelf,
+        imageUrl: prod.imageUrl,
+        createdAt: serverTimestamp()
+      });
+    });
+
+    // Shop Settings
+    const setRef = doc(settingsRef, "shop_info");
+    finalBatch.set(setRef, {
+      ...DEFAULT_SHOP_SETTINGS,
+      updatedAt: serverTimestamp()
+    });
+
+    await finalBatch.commit();
+  };
+
   // Filtering for Historical Sales Invoices Tab
   const filteredHistoricalSales = sales.filter(s => {
     const matchesSearch = s.customerName.toLowerCase().includes(salesSearchTerm.toLowerCase()) || 
@@ -834,6 +951,7 @@ export default function App() {
                   shopSettings={shopSettings}
                   onUpdateShopSettings={handleUpdateShopSettings}
                   onTriggerDatabaseWipeAndSeed={handleWipeAndSeed}
+                  onTriggerDatabaseWipeAndZero={handleWipeAndZero}
                 />
               )}
 

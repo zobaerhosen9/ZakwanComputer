@@ -23,6 +23,7 @@ interface SettingsPaneProps {
   shopSettings: ShopSettings;
   onUpdateShopSettings: (settings: Partial<ShopSettings>) => Promise<void>;
   onTriggerDatabaseWipeAndSeed: () => Promise<void>;
+  onTriggerDatabaseWipeAndZero: () => Promise<void>;
 }
 
 export default function SettingsPane({
@@ -31,7 +32,8 @@ export default function SettingsPane({
   onRoleChange,
   shopSettings,
   onUpdateShopSettings,
-  onTriggerDatabaseWipeAndSeed
+  onTriggerDatabaseWipeAndSeed,
+  onTriggerDatabaseWipeAndZero
 }: SettingsPaneProps) {
   // Pin entry states
   const [pinInput, setPinInput] = useState("");
@@ -109,6 +111,27 @@ export default function SettingsPane({
         window.location.reload();
       } catch (err: any) {
         alert("ডাটাবেজ ওয়াইপ করতে সমস্যা: " + err.message);
+      } finally {
+        setWipeLoading(false);
+      }
+    }
+  };
+
+  // Trigger zero wipe (all accounting set to zero)
+  const handleWipeAndZero = async () => {
+    if (role !== "অ্যাডমিন") {
+      alert("শুধুমাত্র অ্যাডমিন পুরো ডাটাবেজ নিয়ন্ত্রণ করতে পারবে!");
+      return;
+    }
+
+    if (confirm("সতর্কতা: আপনি কি নিশ্চিত যে সব হিসাব-নিকাশ এবং স্টক জিরো (০) করতে চান? \n\nএই অ্যাকশনে সব ক্যাশ মেমো, বেচাকেনা, খরচ, কাস্টমার/সাপ্লায়ার বকেয়া এবং পণ্যের স্টক ডিলিট হয়ে একদম শুন্য (০) হয়ে যাবে!")) {
+      setWipeLoading(true);
+      try {
+        await onTriggerDatabaseWipeAndZero();
+        alert("সব হিসাব-নিকাশ এবং স্টক সফলভাবে জিরো (০) করা হয়েছে! পেজটি পুনরায় রিফ্রেশ হবে।");
+        window.location.reload();
+      } catch (err: any) {
+        alert("হিসাব জিরো করতে সমস্যা: " + err.message);
       } finally {
         setWipeLoading(false);
       }
@@ -268,17 +291,30 @@ export default function SettingsPane({
               <span>ডাটাবেজ এবং ডেমো ম্যানেজার</span>
             </span>
             <p className="text-[11px] text-slate-400 leading-normal">
-              যদি আপনি টেস্ট এন্ট্রি ডিলিট করে স্টক পুনরায় ডিফল্ট পজিশনে ফিরিয়ে নিতে চান, তবে ডাটাবেজ রি-সিড করুন।
+              সিস্টেমের ডেমো ডাটা এবং জিরো-স্টেট বা একদম নতুন স্টার্ট করার জন্য নিচের অপশনগুলো ব্যবহার করুন:
             </p>
-            <button 
-              type="button"
-              onClick={handleWipeAndSeed}
-              disabled={wipeLoading}
-              className="px-4 py-2 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
-            >
-              {wipeLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : null}
-              <span>ডাটা মুছে টেস্ট ডেমো সিড (Seed) করুন</span>
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button 
+                type="button"
+                onClick={handleWipeAndSeed}
+                disabled={wipeLoading}
+                className="flex-1 px-4 py-2 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1"
+              >
+                {wipeLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : null}
+                <span>ডাটা মুছে টেস্ট ডেমো সিড (Seed) করুন</span>
+              </button>
+              
+              <button 
+                type="button"
+                onClick={handleWipeAndZero}
+                disabled={wipeLoading}
+                className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 border border-amber-500 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1 shadow-xs"
+              >
+                {wipeLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : null}
+                <AlertTriangle className="w-3.5 h-3.5 text-slate-900" />
+                <span>সব হিসাবপত্র ০ (Zero) করুন</span>
+              </button>
+            </div>
           </div>
         )}
       </div>
